@@ -59,12 +59,14 @@ static int hop_addEvent(lua_State *L) {
 	int mask = getMask(L, chFilter);
 	if (mask == -1) return luaL_error(L, "Invalid event mask.");
 	
+	if (hloop->api->addEvent(hloop, fd, mask) == -1) {
+		return luaL_error(L, "Could not add event listener.");
+	}
+	
 	hloop->events[fd].L = L;
 	hloop->events[fd].mask |= mask;
 	if (mask & SN_READABLE) hloop->events[fd].rcallback = clbref;
 	if (mask & SN_WRITABLE) hloop->events[fd].wcallback = clbref;
-	
-	hloop->api->addEvent(hloop, fd, mask);
 	
 	return 0;
 }
@@ -81,17 +83,14 @@ static int hop_removeEvent(lua_State *L) {
 	if (hloop->events[fd].mask == SN_NONE) return 0;
 	hloop->events[fd].mask = hloop->events[fd].mask & (~mask);
 	
-	int rcallback = hloop->events[fd].rcallback;
-	int wcallback = hloop->events[fd].wcallback;
-	
 	hloop->api->removeEvent(hloop, fd, mask);
 	if (mask & SN_READABLE) {
 		lua_pushnil(L);
-		lua_rawseti(L, LUA_ENVIRONINDEX, rcallback);
+		lua_rawseti(L, LUA_ENVIRONINDEX, hloop->events[fd].rcallback);
 	}
 	if (mask & SN_WRITABLE) {
 		lua_pushnil(L);
-		lua_rawseti(L, LUA_ENVIRONINDEX, wcallback);
+		lua_rawseti(L, LUA_ENVIRONINDEX, hloop->events[fd].wcallback);
 	}
 	
 	return 0;
