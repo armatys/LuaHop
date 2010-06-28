@@ -64,7 +64,7 @@ static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
 }
 
 static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
-	aeApiState *state = hloop->state;
+	snApiState *state = hloop->state;
     struct epoll_event ee;
     int mask = hloop->events[fd].mask & (~delmask);
 
@@ -85,7 +85,7 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
 }
 
 static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
-	aeApiState *state = hloop->state;
+	snApiState *state = hloop->state;
     int retval, numevents = 0;
 
     retval = epoll_wait(state->epfd,state->events,SN_SETSIZE,

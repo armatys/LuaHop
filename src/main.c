@@ -56,7 +56,10 @@ static int hop_addEvent(lua_State *L) {
 	if (mask == -1) return luaL_error(L, "Invalid event mask.");
 	
 	hloop->events[fd].L = L;
-	hloop->events[fd].clbref = clbref;
+	hloop->events[fd].mask |= mask;
+	//hloop->events[fd].clbref = clbref;
+	if (mask & SN_READABLE) hloop->events[fd].rcallback = clbref;
+	if (mask & SN_WRITABLE) hloop->events[fd].wcallback = clbref;
 	
 	hloop->api->addEvent(hloop, fd, mask);
 	
@@ -71,11 +74,31 @@ static int hop_removeEvent(lua_State *L) {
 	int mask = getMask(L, chFilter);
 	if (mask == -1) return luaL_error(L, "Invalid event mask.");
 	
-	int clbref = hloop->events[fd].clbref;
+	int rcallback = hloop->events[fd].rcallback;
+	int wcallback = hloop->events[fd].wcallback;
 	
 	hloop->api->removeEvent(hloop, fd, mask);
 	lua_pushnil(L);
-	lua_rawseti(L, LUA_ENVIRONINDEX, clbref);
+	lua_rawseti(L, LUA_ENVIRONINDEX, rcallback);
+	lua_pushnil(L);
+	lua_rawseti(L, LUA_ENVIRONINDEX, wcallback);
+	
+	return 0;
+}
+
+static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask) {
+	lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
+	if (!lua_isfunction(L, -1)) return luaL_error(L, "Function was expected");
+	
+	if (ctx != L) {
+		//copy callback function to ctx Lua state
+		lua_xmove(L, ctx, 1);
+	}
+	
+	//call user function (callback)
+	lua_pushnumber(ctx, fd);
+	lua_pushstring(ctx, getChMask(mask));
+	lua_pcall(ctx, 2, 0, 0);
 	
 	return 0;
 }
@@ -88,22 +111,21 @@ static int hop_poll(lua_State *L) {
 	for (i=0; i<nevents; i++) {
 		snEventData *evData = &hloop->events[hloop->fired[i].fd];
 		lua_State *ctx = evData->L;
-		int clbref = evData->clbref;
+		int rcallback = evData->rcallback;
+		int wcallback = evData->wcallback;
 		int mask = hloop->fired[i].mask;
 		int fd = hloop->fired[i].fd;
+		int rfired = 0;
 		
-		lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
-		if (!lua_isfunction(L, -1)) return luaL_error(L, "Function was expected");
-		
-		if (ctx != L) {
-			//copy callback function to ctx Lua state
-			lua_xmove(L, ctx, 1);
+		if (evData->mask & mask & SN_READABLE) {
+			rfired = 1;
+			run_callback(L, ctx, rcallback, fd, mask);
 		}
-		
-		//call user function (callback)
-		lua_pushnumber(ctx, fd);
-		lua_pushstring(ctx, getChMask(mask));
-		lua_pcall(ctx, 2, 0, 0);
+		if (evData->mask & mask & SN_WRITABLE) {
+			if (!rfired || evData->wcallback != evData->rcallback) {
+				run_callback(L, ctx, wcallback, fd, mask);
+			}
+		}
 	}
 	
 	return 0;

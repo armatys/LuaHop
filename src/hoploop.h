@@ -19,7 +19,9 @@ typedef struct snFiredEvent {
 
 typedef struct snEventData {
 	lua_State *L;
-	int clbref; //callback - fn reference
+	int rcallback; //read callback - fn reference
+	int wcallback; //write callback
+	int mask;
 } snEventData;
 
 typedef struct snLoopApi {
@@ -36,7 +38,7 @@ typedef struct snHopLoop {
 	snLoopApi *api;
 	void *state;
 	snEventData events[SN_SETSIZE]; /* Registered events */
-    snFiredEvent fired[SN_SETSIZE]; /* Fired events */
+	snFiredEvent fired[SN_SETSIZE]; /* Fired events */
 } snHopLoop;
 
 #endif
