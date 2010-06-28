@@ -63,7 +63,7 @@ static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
     return 0;
 }
 
-static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
+static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
 	snApiState *state = hloop->state;
     struct epoll_event ee;
     int mask = hloop->events[fd].mask & (~delmask);
