@@ -26,6 +26,10 @@ static int hop_create(lua_State *L) {
 	luaL_getmetatable(L, "eu.sharpnose.hoploop");
 	lua_setmetatable(L, -2);
 	
+	int i = 0;
+	for (i = 0; i < SN_SETSIZE; i++)
+        hloop->events[i].mask = SN_NONE;
+	
 	free(src);
 	
 	return 1;
@@ -57,7 +61,6 @@ static int hop_addEvent(lua_State *L) {
 	
 	hloop->events[fd].L = L;
 	hloop->events[fd].mask |= mask;
-	//hloop->events[fd].clbref = clbref;
 	if (mask & SN_READABLE) hloop->events[fd].rcallback = clbref;
 	if (mask & SN_WRITABLE) hloop->events[fd].wcallback = clbref;
 	
@@ -73,6 +76,10 @@ static int hop_removeEvent(lua_State *L) {
 	
 	int mask = getMask(L, chFilter);
 	if (mask == -1) return luaL_error(L, "Invalid event mask.");
+	
+	if (fd >= SN_SETSIZE) return 0;
+	if (hloop->events[fd].mask == SN_NONE) return 0;
+	hloop->events[fd].mask = hloop->events[fd].mask & (~mask);
 	
 	int rcallback = hloop->events[fd].rcallback;
 	int wcallback = hloop->events[fd].wcallback;
