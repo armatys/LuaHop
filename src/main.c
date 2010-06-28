@@ -85,10 +85,14 @@ static int hop_removeEvent(lua_State *L) {
 	int wcallback = hloop->events[fd].wcallback;
 	
 	hloop->api->removeEvent(hloop, fd, mask);
-	lua_pushnil(L);
-	lua_rawseti(L, LUA_ENVIRONINDEX, rcallback);
-	lua_pushnil(L);
-	lua_rawseti(L, LUA_ENVIRONINDEX, wcallback);
+	if (mask & SN_READABLE) {
+		lua_pushnil(L);
+		lua_rawseti(L, LUA_ENVIRONINDEX, rcallback);
+	}
+	if (mask & SN_WRITABLE) {
+		lua_pushnil(L);
+		lua_rawseti(L, LUA_ENVIRONINDEX, wcallback);
+	}
 	
 	return 0;
 }
