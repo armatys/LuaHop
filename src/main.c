@@ -1,3 +1,34 @@
+/* Parts of the code below are basedon ae.c file from redis project.
+ *
+ * Copyright (c) 2010 Mateusz Armatys
+ * Copyright (c) 2006-2010, Salvatore Sanfilippo <antirez at gmail dot com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *   * Neither the name of Redis nor the names of its contributors may be used
+ *     to endorse or promote products derived from this software without
+ *     specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include <lua.h>
 #include <lauxlib.h>
 #include <string.h>
@@ -54,7 +85,6 @@ static int hop_addEvent(lua_State *L) {
 	int fd = luaL_checknumber(L, 2);
 	const char *chFilter = luaL_checkstring(L, 3);
 	if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expexted.");
-	int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
 	
 	int mask = getMask(L, chFilter);
 	if (mask == -1) return luaL_error(L, "Invalid event mask.");
@@ -63,6 +93,7 @@ static int hop_addEvent(lua_State *L) {
 		return luaL_error(L, "Could not add event listener.");
 	}
 	
+	int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
 	hloop->events[fd].L = L;
 	hloop->events[fd].mask |= mask;
 	if (mask & SN_READABLE) hloop->events[fd].rcallback = clbref;
@@ -108,7 +139,7 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
 	//call user function (callback)
 	lua_pushnumber(ctx, fd);
 	lua_pushstring(ctx, getChMask(mask));
-	lua_pcall(ctx, 2, 0, 0);
+	lua_pcall(ctx, 2, 0, 0); //TODO check for errors
 	
 	return 0;
 }
