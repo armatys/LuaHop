@@ -20,4 +20,5 @@ project "LuaHop"
 		linkoptions { "-single_module", "-undefined dynamic_lookup" }
 	
 	configuration { "linux" }
+		includedirs { "/usr/include/lua5.1" }
 		targetdir "build/linux"
