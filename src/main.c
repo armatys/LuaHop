@@ -60,7 +60,8 @@ static int hop_create(lua_State *L) {
 	
 	int i = 0;
 	for (i = 0; i < SN_SETSIZE; i++)
-        hloop->events[i].mask = SN_NONE;
+		hloop->events[i].mask = SN_NONE;
+	hloop->shouldStop = 0;
 	
 	free(src);
 	
@@ -145,10 +146,10 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
 	return 0;
 }
 
-#define sim 1000000.0 /* 1 second as a number of microseconds */
+#define SIM 1000000.0 /* 1 second as a number of microseconds */
 /* IMPORTANT: time_units and time_scales have to be in sync */
 static const char* time_units[] =   {"us",  "ms",   "s",  "m",    "h",       NULL};
-static const double time_scales[] = { 1.0,  1000.0, sim,  sim*60, sim*60*60};
+static const double time_scales[] = { 1.0,  1000.0, SIM,  SIM*60, SIM*60*60};
 
 static double convert_to_usec(const char *tunit, double val) {
 	double usec = 0;
@@ -191,8 +192,8 @@ static int hop_poll(lua_State *L) {
 		
 		if (usec_total > 0) {
 			tv = malloc(sizeof(struct timeval));
-			tv->tv_sec = (long int) (usec_total / sim);
-			tv->tv_usec = (long int) fmod(usec_total, sim);
+			tv->tv_sec = (long int) (usec_total / SIM);
+			tv->tv_usec = (long int) fmod(usec_total, SIM);
 		}
 	}
 	
@@ -222,7 +223,19 @@ static int hop_poll(lua_State *L) {
 	return 0;
 }
 
+static int hop_stop(lua_State *L) {
+	snHopLoop *hloop = checkLoop(L);
+	hloop->shouldStop = 1;
+	
+	return 0;
+}
+
 static int hop_loop(lua_State *L) {
+	snHopLoop *hloop = checkLoop(L);
+	
+	while (hloop->shouldStop == 0) {
+		hop_poll(L);
+	}
 	
 	return 0;
 }
@@ -247,6 +260,7 @@ static const struct luaL_Reg hoplib_m [] = {
 	{"addEvent", hop_addEvent},
 	{"removeEvent", hop_removeEvent},
 	{"poll", hop_poll},
+	{"stop", hop_stop},
 	{"loop", hop_loop},
 	{"__tostring", hop_repr},
 	{"__gc", hop_gc},

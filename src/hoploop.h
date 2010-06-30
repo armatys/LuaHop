@@ -70,6 +70,7 @@ typedef struct snHopLoop {
 	void *state;
 	snEventData events[SN_SETSIZE]; /* Registered events */
 	snFiredEvent fired[SN_SETSIZE]; /* Fired events */
+	int shouldStop;
 } snHopLoop;
 
 #endif
