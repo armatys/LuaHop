@@ -33,6 +33,7 @@
 #include <lauxlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <math.h>
 #include "config.h"
 #include "hoploop.h"
 
@@ -144,11 +145,60 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
 	return 0;
 }
 
+#define sim 1000000.0 /* 1 second as a number of microseconds */
+/* IMPORTANT: time_units and time_scales have to be in sync */
+static const char* time_units[] =   {"us",  "ms",   "s",  "m",    "h",       NULL};
+static const double time_scales[] = { 1.0,  1000.0, sim,  sim*60, sim*60*60};
+
+static double convert_to_usec(const char *tunit, double val) {
+	double usec = 0;
+	const char *tu;
+	int i = 0;
+	
+	while ((tu = time_units[i])) {
+		if (strncmp(tunit, tu, strlen(tu)) == 0 ) {
+			usec = time_scales[i] * val;
+			break;
+		}
+		
+		i++;
+	}
+	
+	return usec;
+}
+
 static int hop_poll(lua_State *L) {
 	snHopLoop *hloop = checkLoop(L);
-	int nevents = hloop->api->poll(hloop, NULL);
-	
+	struct timeval *tv = NULL;
+	const char *tunit;
+	double usec_total = 0;
 	int i = 0;
+	
+	if (lua_istable(L, 2)) {
+		while ((tunit = time_units[i])) {
+			lua_getfield(L, 2, time_units[i]);
+			if (lua_isnumber(L, -1) == 0) {
+				lua_pop(L, 1);
+				i++;
+				continue;
+			}
+			double n = lua_tonumber(L, -1);
+			lua_pop(L, 1);
+			usec_total += convert_to_usec(time_units[i], n);
+			
+			i++;
+		}
+		
+		if (usec_total > 0) {
+			tv = malloc(sizeof(struct timeval));
+			tv->tv_sec = (long int) (usec_total / sim);
+			tv->tv_usec = (long int) fmod(usec_total, sim);
+		}
+	}
+	
+	int nevents = hloop->api->poll(hloop, tv);
+	if (tv != NULL) free(tv);
+	
 	for (i=0; i<nevents; i++) {
 		snEventData *evData = &hloop->events[hloop->fired[i].fd];
 		lua_State *ctx = evData->L;
@@ -168,6 +218,11 @@ static int hop_poll(lua_State *L) {
 			}
 		}
 	}
+	
+	return 0;
+}
+
+static int hop_loop(lua_State *L) {
 	
 	return 0;
 }
@@ -192,6 +247,7 @@ static const struct luaL_Reg hoplib_m [] = {
 	{"addEvent", hop_addEvent},
 	{"removeEvent", hop_removeEvent},
 	{"poll", hop_poll},
+	{"loop", hop_loop},
 	{"__tostring", hop_repr},
 	{"__gc", hop_gc},
 	{NULL, NULL}
