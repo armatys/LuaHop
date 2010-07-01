@@ -40,7 +40,7 @@
 #define SN_NONE 0
 #define SN_READABLE 1
 #define SN_WRITABLE 2
-#define SN_TIMER 3
+#define SN_TIMER 4
 
 struct snHopLoop;
 
@@ -59,6 +59,7 @@ typedef struct snEventData {
 typedef struct snTimerEvent {
     lua_State *L;
     int callback;
+    int mask;
 } snTimerEvent;
 
 typedef struct snLoopApi {

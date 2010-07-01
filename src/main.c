@@ -112,8 +112,11 @@ static int hop_create(lua_State *L) {
     lua_setmetatable(L, -2);
     
     int i = 0;
-    for (i = 0; i < SN_SETSIZE; i++)
+    for (i = 0; i < SN_SETSIZE; i++) {
         hloop->events[i].mask = SN_NONE;
+        hloop->timers[i].mask = SN_NONE;
+    }
+    
     hloop->shouldStop = 0;
     
     free(src);
@@ -125,6 +128,7 @@ static int getMask(lua_State *L, const char *chFilter) {
     if (strncmp(chFilter, "r", 2) == 0) return SN_READABLE;
     else if (strncmp(chFilter, "w", 2) == 0) return SN_WRITABLE;
     else if (strncmp(chFilter, "rw", 3) == 0) return SN_READABLE | SN_WRITABLE;
+    else if (strncmp(chFilter, "timer", 6) == 0) return SN_TIMER;
     else return -1;
 }
 
@@ -132,6 +136,7 @@ static const char *getChMask(int mask) {
     if (mask & SN_READABLE & SN_WRITABLE) return "rw";
     else if (mask & SN_READABLE) return "r";
     else if (mask & SN_WRITABLE) return "w";
+    else if (mask & SN_TIMER) return "timer";
     else return "";
 }
 
@@ -157,12 +162,7 @@ static int hop_addEvent(lua_State *L) {
     return 0;
 }
 
-static int hop_removeEvent(lua_State *L) {
-    snHopLoop *hloop = checkLoop(L);
-    int fd = luaL_checknumber(L, 2);
-    const char *chFilter = luaL_checkstring(L, 3);
-    
-    int mask = getMask(L, chFilter);
+static int _removeEvent(lua_State *L, int fd, int mask, snHopLoop *hloop) {
     if (mask == -1) return luaL_error(L, "Invalid event mask.");
     
     if (fd >= SN_SETSIZE) return 0;
@@ -182,6 +182,16 @@ static int hop_removeEvent(lua_State *L) {
     return 0;
 }
 
+static int hop_removeEvent(lua_State *L) {
+    snHopLoop *hloop = checkLoop(L);
+    int fd = luaL_checknumber(L, 2);
+    const char *chFilter = luaL_checkstring(L, 3);
+    
+    int mask = getMask(L, chFilter);
+    
+    return _removeEvent(L, fd, mask, hloop);
+}
+
 static int hop_setTimeout(lua_State *L) {
     snHopLoop *hloop = checkLoop(L);
     int fd = luaL_checknumber(L, 2);
@@ -197,6 +207,7 @@ static int hop_setTimeout(lua_State *L) {
     int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
     hloop->timers[fd].L = L;
     hloop->timers[fd].callback = clbref;
+    hloop->timers[fd].mask = SN_TIMER;
     
     hloop->api->setTimeout(hloop, fd, tv);
     
@@ -216,8 +227,21 @@ static int hop_setInterval(lua_State *L) {
     int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
     hloop->timers[fd].L = L;
     hloop->timers[fd].callback = clbref;
+    hloop->timers[fd].mask = SN_TIMER;
     
     hloop->api->setInterval(hloop, fd, tv);
+    
+    return 0;
+}
+
+static int _clearTimer(lua_State *L, snHopLoop *hloop, int fd) {
+    if (hloop->timers[fd].mask == SN_NONE) return 0;
+    hloop->timers[fd].mask = SN_NONE;
+    
+    hloop->api->clearTimer(hloop, fd);
+    
+    lua_pushnil(L);
+    lua_rawseti(L, LUA_ENVIRONINDEX, hloop->timers[fd].callback);
     
     return 0;
 }
@@ -226,12 +250,10 @@ static int hop_clearTimer(lua_State *L) {
     snHopLoop *hloop = checkLoop(L);
     int fd = luaL_checknumber(L, 2);
     
-    hloop->api->clearTimer(hloop, fd);
-    
-    return 0;
+    return _clearTimer(L, hloop, fd);
 }
 
-static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask) {
+static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask, snHopLoop *hloop) {
     lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
     if (!lua_isfunction(L, -1)) return luaL_error(L, "Function was expected");
     
@@ -243,7 +265,16 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     //call user function (callback)
     lua_pushnumber(ctx, fd);
     lua_pushstring(ctx, getChMask(mask));
-    lua_pcall(ctx, 2, 0, 0); //TODO check for errors
+    
+    lua_pcall(ctx, 2, 1, 0);
+    if (lua_isboolean(L, -1)) {
+        int shouldDelete = !lua_toboolean(L, -1);
+        if (shouldDelete && (mask & SN_TIMER)) { /* timer event */
+            _clearTimer(L, hloop, fd);
+        } else if (shouldDelete) { /* file event */
+            _removeEvent(L, fd, mask, hloop);
+        }
+    }
     
     return 0;
 }
@@ -276,9 +307,9 @@ static int hop_poll(lua_State *L) {
             snTimerEvent timerEvent = hloop->timers[fd];
             lua_State *ctx = timerEvent.L;
             
-            if (mask & SN_TIMER) {
+            if (timerEvent.mask & mask & SN_TIMER) {
                 int callback = timerEvent.callback;
-                run_callback(L, ctx, callback, fd, mask);
+                run_callback(L, ctx, callback, fd, mask, hloop);
             }
         } else { /* <file event> */
             snEventData *evData = &hloop->events[fd];
@@ -289,11 +320,11 @@ static int hop_poll(lua_State *L) {
             
             if (evData->mask & mask & SN_READABLE) {
                 rfired = 1;
-                run_callback(L, ctx, rcallback, fd, mask);
+                run_callback(L, ctx, rcallback, fd, mask, NULL);
             }
             if (evData->mask & mask & SN_WRITABLE) {
                 if (!rfired || evData->wcallback != evData->rcallback) {
-                    run_callback(L, ctx, wcallback, fd, mask);
+                    run_callback(L, ctx, wcallback, fd, mask, NULL);
                 }
             }
         } /* </file event> */
