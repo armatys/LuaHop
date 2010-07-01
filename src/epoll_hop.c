@@ -33,11 +33,6 @@
 #include <sys/epoll.h>
 #include "hoploop.h"
 
-static int init(struct snHopLoop *);
-static int addEvent(struct snHopLoop *hloop, int fd, int mask);
-static int removeEvent(struct snHopLoop *, int fd, int mask);
-static int poll(struct snHopLoop *, struct timeval *tvp);
-
 typedef struct snApiState {
     int epfd;
     struct epoll_event events[SN_SETSIZE];
@@ -56,9 +51,6 @@ static snHopLoop *createLoop() {
     loop->state = state;
     
     api->name = "epoll";
-    api->addEvent = addEvent;
-    api->removeEvent = removeEvent;
-    api->poll = poll;
     
     if (init(loop) < 0) {
         return NULL;
@@ -111,6 +103,21 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
          * EPOLL_CTL_DEL. */
         epoll_ctl(state->epfd,EPOLL_CTL_DEL,fd,&ee);
     }
+    
+    return 0;
+}
+
+static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+    
+    return 0;
+}
+
+static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+    
+    return 0;
+}
+
+static int clearTimer(struct snHopLoop *hloop, int fd) {
     
     return 0;
 }

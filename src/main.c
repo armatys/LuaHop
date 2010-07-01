@@ -119,6 +119,14 @@ static int hop_create(lua_State *L) {
     
     hloop->shouldStop = 0;
     
+    hloop->api->addEvent = addEvent;
+    hloop->api->removeEvent = removeEvent;
+    hloop->api->poll = poll;
+    
+    hloop->api->setTimeout = setTimeout;
+    hloop->api->setInterval = setInterval;
+    hloop->api->clearTimer = clearTimer;
+    
     free(src);
     
     return 1;

@@ -85,4 +85,12 @@ typedef struct snHopLoop {
     int shouldStop;
 } snHopLoop;
 
+static int init(struct snHopLoop *);
+static int addEvent(struct snHopLoop *hloop, int fd, int mask);
+static int removeEvent(struct snHopLoop *, int fd, int mask);
+static int poll(struct snHopLoop *, struct timeval *tvp);
+static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+static int clearTimer(struct snHopLoop *hloop, int fd);
+
 #endif

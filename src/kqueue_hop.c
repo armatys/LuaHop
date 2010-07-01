@@ -35,14 +35,6 @@
 #include <sys/time.h>
 #include "hoploop.h"
 
-static int init(struct snHopLoop *);
-static int addEvent(struct snHopLoop *hloop, int fd, int mask);
-static int removeEvent(struct snHopLoop *, int fd, int mask);
-static int poll(struct snHopLoop *, struct timeval *tvp);
-static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp);
-static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp);
-static int clearTimer(struct snHopLoop *hloop, int fd);
-
 typedef struct snApiState {
     int kqfd;
     struct kevent events[SN_SETSIZE];
@@ -61,13 +53,6 @@ static snHopLoop *createLoop() {
     loop->state = state;
     
     api->name = "kqueue";
-    api->addEvent = addEvent;
-    api->removeEvent = removeEvent;
-    api->poll = poll;
-    
-    api->setTimeout = setTimeout;
-    api->setInterval = setInterval;
-    api->clearTimer = clearTimer;
     
     if (init(loop) < 0) {
         return NULL;
