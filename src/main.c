@@ -178,6 +178,7 @@ static int _removeEvent(lua_State *L, int fd, int mask, snHopLoop *hloop) {
     hloop->events[fd].mask = hloop->events[fd].mask & (~mask);
     
     hloop->api->removeEvent(hloop, fd, mask);
+    
     if (mask & SN_READABLE) {
         lua_pushnil(L);
         lua_rawseti(L, LUA_ENVIRONINDEX, hloop->events[fd].rcallback);
@@ -275,14 +276,6 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     lua_pushstring(ctx, getChMask(mask));
     
     lua_pcall(ctx, 2, 1, 0);
-    if (lua_isboolean(L, -1)) {
-        int shouldDelete = !lua_toboolean(L, -1);
-        if (shouldDelete && (mask & SN_TIMER)) { /* timer event */
-            _clearTimer(L, hloop, fd);
-        } else if (shouldDelete) { /* file event */
-            _removeEvent(L, fd, mask, hloop);
-        }
-    }
     
     return 0;
 }
