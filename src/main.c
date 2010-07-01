@@ -312,7 +312,7 @@ static int hop_poll(lua_State *L) {
                 run_callback(L, ctx, callback, fd, mask, hloop);
             }
         } else { /* <file event> */
-            snEventData *evData = &hloop->events[fd];
+            snFileEvent *evData = &hloop->events[fd];
             lua_State *ctx = evData->L;
             int rcallback = evData->rcallback;
             int wcallback = evData->wcallback;

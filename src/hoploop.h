@@ -49,12 +49,12 @@ typedef struct snFiredEvent {
     int mask;
 } snFiredEvent;
 
-typedef struct snEventData {
+typedef struct snFileEvent {
     lua_State *L;
     int rcallback; //read callback - fn reference
     int wcallback; //write callback
     int mask;
-} snEventData;
+} snFileEvent;
 
 typedef struct snTimerEvent {
     lua_State *L;
@@ -79,7 +79,7 @@ typedef struct snLoopApi {
 typedef struct snHopLoop {
     snLoopApi *api;
     void *state;
-    snEventData events[SN_SETSIZE]; /* Registered file events */
+    snFileEvent events[SN_SETSIZE]; /* Registered file events */
     snTimerEvent timers[SN_SETSIZE];
     snFiredEvent fired[SN_SETSIZE]; /* Fired events */
     int shouldStop;
