@@ -304,11 +304,11 @@ static int hop_poll(lua_State *L) {
         int fd = fevent.fd;
         
         if (mask & SN_TIMER) { /* timer event */
-            snTimerEvent timerEvent = hloop->timers[fd];
-            lua_State *ctx = timerEvent.L;
+            snTimerEvent *timerEvent = &hloop->timers[fd];
+            lua_State *ctx = timerEvent->L;
             
-            if (timerEvent.mask & mask & SN_TIMER) {
-                int callback = timerEvent.callback;
+            if (timerEvent->mask & mask & SN_TIMER) {
+                int callback = timerEvent->callback;
                 run_callback(L, ctx, callback, fd, mask, hloop);
             }
         } else { /* <file event> */
