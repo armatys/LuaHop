@@ -343,6 +343,7 @@ static int hop_stop(lua_State *L) {
 
 static int hop_loop(lua_State *L) {
     snHopLoop *hloop = checkLoop(L);
+    hloop->shouldStop = 0;
     
     while (hloop->shouldStop == 0) {
         hop_poll(L);
