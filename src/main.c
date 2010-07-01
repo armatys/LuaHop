@@ -213,6 +213,10 @@ static int hop_setInterval(lua_State *L) {
     tv->tv_sec = (long int) (usec_total / SIM);
     tv->tv_usec = (long int) fmod(usec_total, SIM);
     
+    int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
+    hloop->timers[fd].L = L;
+    hloop->timers[fd].callback = clbref;
+    
     hloop->api->setInterval(hloop, fd, tv);
     
     return 0;
