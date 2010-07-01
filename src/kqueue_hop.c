@@ -39,6 +39,9 @@ static int init(struct snHopLoop *);
 static int addEvent(struct snHopLoop *hloop, int fd, int mask);
 static int removeEvent(struct snHopLoop *, int fd, int mask);
 static int poll(struct snHopLoop *, struct timeval *tvp);
+static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+static int clearTimer(struct snHopLoop *hloop, int fd);
 
 typedef struct snApiState {
     int kqfd;
@@ -61,6 +64,10 @@ static snHopLoop *createLoop() {
     api->addEvent = addEvent;
     api->removeEvent = removeEvent;
     api->poll = poll;
+    
+    api->setTimeout = setTimeout;
+    api->setInterval = setInterval;
+    api->clearTimer = clearTimer;
     
     if (init(loop) < 0) {
         return NULL;
@@ -114,17 +121,19 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
 }
 
 /* Timer has two types: timeouts and intervals (as in JavaScript) */
-static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int fflags) {
+static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int flags) {
     snApiState *state = hloop->state;
     int kqfd = state->kqfd;
     struct kevent ke;
     
-    if (fflags & EV_ADD) { /* add timer */
-        EV_SET(&ke, fd, EVFILT_TIMER, fflags, 0, millis, NULL);
-    } else if (fflags & EV_CLEAR) { /* clear timer */
-        EV_SET(&ke, fd, EVFILT_TIMER, fflags, 0, 0, NULL);
+    if ((flags & EV_ADD) && tvp) { /* add timer */
+        long int millis = tvp->tv_sec * 1000 + tvp->tv_usec / 1000;
+        EV_SET(&ke, fd, EVFILT_TIMER, flags, 0, millis, NULL);
+        kevent(kqfd, &ke, 1, NULL, 0, NULL);
+    } else if (flags & EV_CLEAR) { /* clear timer */
+        EV_SET(&ke, fd, EVFILT_TIMER, flags, 0, 0, NULL);
+        kevent(kqfd, &ke, 1, NULL, 0, NULL);
     }
-    kevent(kqfd, &ke, 1, NULL, 0, NULL);
     
     return 0;
 }

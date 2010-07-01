@@ -61,6 +61,10 @@ typedef struct snLoopApi {
     int (*removeEvent)(struct snHopLoop*, int fd, int mask);
     int (*poll)(struct snHopLoop*, struct timeval *tvp);
     
+    int (*setTimeout)(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+    int (*setInterval)(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+    int (*clearTimer)(struct snHopLoop *hloop, int fd);
+    
     /* fields */
     const char *name;
 } snLoopApi;
