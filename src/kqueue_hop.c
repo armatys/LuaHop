@@ -46,43 +46,43 @@ typedef struct snApiState {
 } snApiState;
 
 static snHopLoop *createLoop() {
-	snHopLoop *loop = malloc(sizeof(snHopLoop));
-	snLoopApi *api = malloc(sizeof(snLoopApi));
-	snApiState *state = malloc(sizeof(snApiState));
-	
-	if (! (loop && api)) {
-		return NULL;
-	}
-	
-	loop->api = api;
-	loop->state = state;
-	
-	api->name = "kqueue";
-	api->addEvent = addEvent;
-	api->removeEvent = removeEvent;
-	api->poll = poll;
-	
-	if (init(loop) < 0) {
-		return NULL;
-	}
-	
-	return loop;
+    snHopLoop *loop = malloc(sizeof(snHopLoop));
+    snLoopApi *api = malloc(sizeof(snLoopApi));
+    snApiState *state = malloc(sizeof(snApiState));
+    
+    if (! (loop && api)) {
+        return NULL;
+    }
+    
+    loop->api = api;
+    loop->state = state;
+    
+    api->name = "kqueue";
+    api->addEvent = addEvent;
+    api->removeEvent = removeEvent;
+    api->poll = poll;
+    
+    if (init(loop) < 0) {
+        return NULL;
+    }
+    
+    return loop;
 }
 
 static int init(struct snHopLoop *hloop) {
-	int kqfd = kqueue();
+    int kqfd = kqueue();
     if (kqfd == -1) return -1;
     
     snApiState *state = hloop->state;
     state->kqfd = kqfd;
-	
-	return 0;
+    
+    return 0;
 }
 
 static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
-	snApiState *state = hloop->state;
-	int kqfd = state->kqfd;
-	struct kevent ke;
+    snApiState *state = hloop->state;
+    int kqfd = state->kqfd;
+    struct kevent ke;
     
     if (mask & SN_READABLE) {
         EV_SET(&ke, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -93,13 +93,13 @@ static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
         if (kevent(kqfd, &ke, 1, NULL, 0, NULL) == -1) return -1;
     }
 
-	return 0;
+    return 0;
 }
 
 static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
-	snApiState *state = hloop->state;
-	int kqfd = state->kqfd;
-	struct kevent ke;
+    snApiState *state = hloop->state;
+    int kqfd = state->kqfd;
+    struct kevent ke;
 
     if (mask & SN_READABLE) {
         EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
@@ -109,13 +109,41 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int mask) {
         EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
         kevent(kqfd, &ke, 1, NULL, 0, NULL);
     }
-	
-	return 0;
+    
+    return 0;
+}
+
+/* Timer has two types: timeouts and intervals (as in JavaScript) */
+static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int fflags) {
+    snApiState *state = hloop->state;
+    int kqfd = state->kqfd;
+    struct kevent ke;
+    
+    if (fflags & EV_ADD) { /* add timer */
+        EV_SET(&ke, fd, EVFILT_TIMER, fflags, 0, millis, NULL);
+    } else if (fflags & EV_CLEAR) { /* clear timer */
+        EV_SET(&ke, fd, EVFILT_TIMER, fflags, 0, 0, NULL);
+    }
+    kevent(kqfd, &ke, 1, NULL, 0, NULL);
+    
+    return 0;
+}
+
+static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+    return setTimer(hloop, fd, tvp, EV_ADD|EV_ONESHOT);
+}
+
+static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+    return setTimer(hloop, fd, tvp, EV_ADD);
+}
+
+static int clearTimer(struct snHopLoop *hloop, int fd) {
+    return setTimer(hloop, fd, NULL, EV_CLEAR);
 }
 
 static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
-	snApiState *state = hloop->state;
-	int kqfd = state->kqfd;
+    snApiState *state = hloop->state;
+    int kqfd = state->kqfd;
     int retval, numevents = 0;
 
     if (tvp != NULL) {

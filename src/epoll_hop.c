@@ -44,40 +44,40 @@ typedef struct snApiState {
 } snApiState;
 
 static snHopLoop *createLoop() {
-	snHopLoop *loop = malloc(sizeof(snHopLoop));
-	snLoopApi *api = malloc(sizeof(snLoopApi));
-	snApiState *state = malloc(sizeof(snApiState));
-	
-	if (! (loop && api)) {
-		return NULL;
-	}
-	
-	loop->api = api;
-	loop->state = state;
-	
-	api->name = "epoll";
-	api->addEvent = addEvent;
-	api->removeEvent = removeEvent;
-	api->poll = poll;
-	
-	if (init(loop) < 0) {
-		return NULL;
-	}
-	
-	return loop;
+    snHopLoop *loop = malloc(sizeof(snHopLoop));
+    snLoopApi *api = malloc(sizeof(snLoopApi));
+    snApiState *state = malloc(sizeof(snApiState));
+    
+    if (! (loop && api)) {
+        return NULL;
+    }
+    
+    loop->api = api;
+    loop->state = state;
+    
+    api->name = "epoll";
+    api->addEvent = addEvent;
+    api->removeEvent = removeEvent;
+    api->poll = poll;
+    
+    if (init(loop) < 0) {
+        return NULL;
+    }
+    
+    return loop;
 }
 
 static int init(struct snHopLoop * hloop) {
-	int epfd = epoll_create(1024); /* 1024 is just an hint for the kernel */
-	snApiState *state = hloop->state;
-	if (epfd == -1) return -1;
-	state->epfd = epfd;
-	
-	return 0;
+    int epfd = epoll_create(1024); /* 1024 is just an hint for the kernel */
+    snApiState *state = hloop->state;
+    if (epfd == -1) return -1;
+    state->epfd = epfd;
+    
+    return 0;
 }
 
 static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
-	snApiState *state = hloop->state;
+    snApiState *state = hloop->state;
     struct epoll_event ee;
     /* If the fd was already monitored for some event, we need a MOD
      * operation. Otherwise we need an ADD operation. */
@@ -95,7 +95,7 @@ static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
 }
 
 static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
-	snApiState *state = hloop->state;
+    snApiState *state = hloop->state;
     struct epoll_event ee;
     int mask = hloop->events[fd].mask & (~delmask);
 
@@ -112,11 +112,11 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
         epoll_ctl(state->epfd,EPOLL_CTL_DEL,fd,&ee);
     }
     
-	return 0;
+    return 0;
 }
 
 static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
-	snApiState *state = hloop->state;
+    snApiState *state = hloop->state;
     int retval, numevents = 0;
 
     retval = epoll_wait(state->epfd,state->events,SN_SETSIZE,
