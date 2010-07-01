@@ -147,7 +147,7 @@ static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
 }
 
 static int clearTimer(struct snHopLoop *hloop, int fd) {
-    return setTimer(hloop, fd, NULL, EV_CLEAR);
+    return setTimer(hloop, fd, NULL, EV_DELETE);
 }
 
 static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
@@ -174,6 +174,7 @@ static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
             
             if (e->filter == EVFILT_READ) mask |= SN_READABLE;
             if (e->filter == EVFILT_WRITE) mask |= SN_WRITABLE;
+            if (e->filter == EVFILT_TIMER) mask |= SN_TIMER;
             
             hloop->fired[j].fd = e->ident; 
             hloop->fired[j].mask = mask;  

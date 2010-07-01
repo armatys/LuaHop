@@ -49,6 +49,57 @@ static snHopLoop *createLoop(); //backend-specific; defined in files below
 
 #define checkLoop(L) (snHopLoop *)luaL_checkudata(L, 1, "eu.sharpnose.hoploop")
 
+#define SIM 1000000.0 /* 1 second as a number of microseconds */
+/* IMPORTANT: time_units and time_scales have to be in sync */
+/* The following time_units values are: 
+ microseconds, milliseconds, seconds, minutes, hours */
+static const char* time_units[] =   {"us",  "ms",   "s",  "m",    "h",       NULL};
+static const double time_scales[] = { 1.0,  1000.0, SIM,  SIM*60, SIM*60*60};
+
+static double convert_to_usec(const char *tunit, double val) {
+    double usec = 0;
+    const char *tu;
+    int i = 0;
+    
+    while ((tu = time_units[i])) {
+        if (strncmp(tunit, tu, strlen(tu)) == 0 ) {
+            usec = time_scales[i] * val;
+            break;
+        }
+        
+        i++;
+    }
+    
+    return usec;
+}
+
+/**
+ * Converts table containing time data, to microseconds.
+ * Table can look like {h=1, m=5, s=60}
+ * Available keys are defined in time_units constant.
+ **/
+static double table_to_usec(lua_State *L, int tidx) {
+    int i = 0;
+    const char *tunit;
+    int usec_total = 0;
+    
+    while ((tunit = time_units[i])) {
+        lua_getfield(L, tidx, time_units[i]);
+        if (lua_isnumber(L, -1) == 0) {
+            lua_pop(L, 1);
+            i++;
+            continue;
+        }
+        double n = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        usec_total += convert_to_usec(time_units[i], n);
+        
+        i++;
+    }
+    
+    return usec_total;
+}
+
 static int hop_create(lua_State *L) {
     snHopLoop *src = createLoop(L);
     if (!src) return luaL_error(L, "Could not create snHopLoop.");
@@ -131,6 +182,51 @@ static int hop_removeEvent(lua_State *L) {
     return 0;
 }
 
+static int hop_setTimeout(lua_State *L) {
+    snHopLoop *hloop = checkLoop(L);
+    int fd = luaL_checknumber(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+    if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expexted.");
+    
+    struct timeval *tv = malloc(sizeof(struct timeval));
+    int usec_total = table_to_usec(L, 3);
+    
+    tv->tv_sec = (long int) (usec_total / SIM);
+    tv->tv_usec = (long int) fmod(usec_total, SIM);
+    
+    int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
+    hloop->timers[fd].L = L;
+    hloop->timers[fd].callback = clbref;
+    
+    hloop->api->setTimeout(hloop, fd, tv);
+    
+    return 0;
+}
+
+static int hop_setInterval(lua_State *L) {
+    snHopLoop *hloop = checkLoop(L);
+    int fd = luaL_checknumber(L, 2);
+    luaL_checktype(L, 3, LUA_TTABLE);
+    struct timeval *tv = malloc(sizeof(struct timeval));
+    int usec_total = table_to_usec(L, 3);
+    
+    tv->tv_sec = (long int) (usec_total / SIM);
+    tv->tv_usec = (long int) fmod(usec_total, SIM);
+    
+    hloop->api->setInterval(hloop, fd, tv);
+    
+    return 0;
+}
+
+static int hop_clearTimer(lua_State *L) {
+    snHopLoop *hloop = checkLoop(L);
+    int fd = luaL_checknumber(L, 2);
+    
+    hloop->api->clearTimer(hloop, fd);
+    
+    return 0;
+}
+
 static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask) {
     lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
     if (!lua_isfunction(L, -1)) return luaL_error(L, "Function was expected");
@@ -148,49 +244,13 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     return 0;
 }
 
-#define SIM 1000000.0 /* 1 second as a number of microseconds */
-/* IMPORTANT: time_units and time_scales have to be in sync */
-static const char* time_units[] =   {"us",  "ms",   "s",  "m",    "h",       NULL};
-static const double time_scales[] = { 1.0,  1000.0, SIM,  SIM*60, SIM*60*60};
-
-static double convert_to_usec(const char *tunit, double val) {
-    double usec = 0;
-    const char *tu;
-    int i = 0;
-    
-    while ((tu = time_units[i])) {
-        if (strncmp(tunit, tu, strlen(tu)) == 0 ) {
-            usec = time_scales[i] * val;
-            break;
-        }
-        
-        i++;
-    }
-    
-    return usec;
-}
-
 static int hop_poll(lua_State *L) {
     snHopLoop *hloop = checkLoop(L);
     struct timeval *tv = NULL;
-    const char *tunit;
     double usec_total = 0;
-    int i = 0;
     
     if (lua_istable(L, 2)) {
-        while ((tunit = time_units[i])) {
-            lua_getfield(L, 2, time_units[i]);
-            if (lua_isnumber(L, -1) == 0) {
-                lua_pop(L, 1);
-                i++;
-                continue;
-            }
-            double n = lua_tonumber(L, -1);
-            lua_pop(L, 1);
-            usec_total += convert_to_usec(time_units[i], n);
-            
-            i++;
-        }
+        usec_total = table_to_usec(L, 2);
         
         if (usec_total > 0) {
             tv = malloc(sizeof(struct timeval));
@@ -202,24 +262,37 @@ static int hop_poll(lua_State *L) {
     int nevents = hloop->api->poll(hloop, tv);
     if (tv != NULL) free(tv);
     
+    int i = 0;
     for (i=0; i<nevents; i++) {
-        snEventData *evData = &hloop->events[hloop->fired[i].fd];
-        lua_State *ctx = evData->L;
-        int rcallback = evData->rcallback;
-        int wcallback = evData->wcallback;
-        int mask = hloop->fired[i].mask;
-        int fd = hloop->fired[i].fd;
-        int rfired = 0;
+        snFiredEvent fevent = hloop->fired[i];
+        int mask = fevent.mask;
+        int fd = fevent.fd;
         
-        if (evData->mask & mask & SN_READABLE) {
-            rfired = 1;
-            run_callback(L, ctx, rcallback, fd, mask);
-        }
-        if (evData->mask & mask & SN_WRITABLE) {
-            if (!rfired || evData->wcallback != evData->rcallback) {
-                run_callback(L, ctx, wcallback, fd, mask);
+        if (mask & SN_TIMER) { /* timer event */
+            snTimerEvent timerEvent = hloop->timers[fd];
+            lua_State *ctx = timerEvent.L;
+            
+            if (mask & SN_TIMER) {
+                int callback = timerEvent.callback;
+                run_callback(L, ctx, callback, fd, mask);
             }
-        }
+        } else { /* <file event> */
+            snEventData *evData = &hloop->events[fd];
+            lua_State *ctx = evData->L;
+            int rcallback = evData->rcallback;
+            int wcallback = evData->wcallback;
+            int rfired = 0;
+            
+            if (evData->mask & mask & SN_READABLE) {
+                rfired = 1;
+                run_callback(L, ctx, rcallback, fd, mask);
+            }
+            if (evData->mask & mask & SN_WRITABLE) {
+                if (!rfired || evData->wcallback != evData->rcallback) {
+                    run_callback(L, ctx, wcallback, fd, mask);
+                }
+            }
+        } /* </file event> */
     }
     
     return 0;
@@ -261,6 +334,9 @@ static int hop_gc(lua_State *L) {
 static const struct luaL_Reg hoplib_m [] = {
     {"addEvent", hop_addEvent},
     {"removeEvent", hop_removeEvent},
+    {"setTimeout", hop_setTimeout},
+    {"setInterval", hop_setInterval},
+    {"clearTimer", hop_clearTimer},
     {"poll", hop_poll},
     {"stop", hop_stop},
     {"loop", hop_loop},

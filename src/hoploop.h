@@ -40,6 +40,7 @@
 #define SN_NONE 0
 #define SN_READABLE 1
 #define SN_WRITABLE 2
+#define SN_TIMER 3
 
 struct snHopLoop;
 
@@ -54,6 +55,11 @@ typedef struct snEventData {
     int wcallback; //write callback
     int mask;
 } snEventData;
+
+typedef struct snTimerEvent {
+    lua_State *L;
+    int callback;
+} snTimerEvent;
 
 typedef struct snLoopApi {
     /* methods */
@@ -72,7 +78,8 @@ typedef struct snLoopApi {
 typedef struct snHopLoop {
     snLoopApi *api;
     void *state;
-    snEventData events[SN_SETSIZE]; /* Registered events */
+    snEventData events[SN_SETSIZE]; /* Registered file events */
+    snTimerEvent timers[SN_SETSIZE];
     snFiredEvent fired[SN_SETSIZE]; /* Fired events */
     int shouldStop;
 } snHopLoop;
