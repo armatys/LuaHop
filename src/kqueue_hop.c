@@ -130,8 +130,8 @@ static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int fl
         long int millis = tvp->tv_sec * 1000 + tvp->tv_usec / 1000;
         EV_SET(&ke, fd, EVFILT_TIMER, flags, 0, millis, NULL);
         kevent(kqfd, &ke, 1, NULL, 0, NULL);
-    } else if (flags & EV_CLEAR) { /* clear timer */
-        EV_SET(&ke, fd, EVFILT_TIMER, flags, 0, 0, NULL);
+    } else if (flags & EV_DELETE) { /* clear timer */
+        EV_SET(&ke, fd, EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
         kevent(kqfd, &ke, 1, NULL, 0, NULL);
     }
     
