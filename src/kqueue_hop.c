@@ -160,6 +160,7 @@ static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
             if (e->filter == EVFILT_READ) mask |= SN_READABLE;
             if (e->filter == EVFILT_WRITE) mask |= SN_WRITABLE;
             if (e->filter == EVFILT_TIMER) mask |= SN_TIMER;
+            if (e->flags & EV_ONESHOT) mask |= SN_ONCE;
             
             hloop->fired[j].fd = e->ident; 
             hloop->fired[j].mask = mask;  

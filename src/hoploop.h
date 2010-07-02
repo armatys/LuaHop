@@ -41,6 +41,7 @@
 #define SN_READABLE 1
 #define SN_WRITABLE 2
 #define SN_TIMER 4
+#define SN_ONCE 8
 
 struct snHopLoop;
 

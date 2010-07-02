@@ -100,12 +100,31 @@ static double table_to_usec(lua_State *L, int tidx) {
     return usec_total;
 }
 
+static int getMask(lua_State *L, const char *chFilter) {
+    if (strncmp(chFilter, "r", 2) == 0) return SN_READABLE;
+    else if (strncmp(chFilter, "w", 2) == 0) return SN_WRITABLE;
+    else if (strncmp(chFilter, "rw", 3) == 0) return SN_READABLE | SN_WRITABLE;
+    else if (strncmp(chFilter, "timer", 6) == 0) return SN_TIMER;
+    else return -1;
+}
+
+static const char *getChMask(int mask) {
+    if (mask & SN_READABLE & SN_WRITABLE) return "rw";
+    else if (mask & SN_READABLE) return "r";
+    else if (mask & SN_WRITABLE) return "w";
+    else if (mask & SN_TIMER) return "timer";
+    else return "";
+}
+
 static int hop_create(lua_State *L) {
     snHopLoop *src = createLoop(L);
     if (!src) return luaL_error(L, "Could not create snHopLoop.");
     
     snHopLoop *hloop = lua_newuserdata(L, sizeof(snHopLoop));
-    if (!hloop) return luaL_error(L, "Could not create snHopLoop.");
+    if (!hloop) {
+        free(src);
+        return luaL_error(L, "Could not create snHopLoop.");
+    }
     
     memcpy(hloop, src, sizeof(snHopLoop));
     luaL_getmetatable(L, "eu.sharpnose.hoploop");
@@ -130,22 +149,6 @@ static int hop_create(lua_State *L) {
     free(src);
     
     return 1;
-}
-
-static int getMask(lua_State *L, const char *chFilter) {
-    if (strncmp(chFilter, "r", 2) == 0) return SN_READABLE;
-    else if (strncmp(chFilter, "w", 2) == 0) return SN_WRITABLE;
-    else if (strncmp(chFilter, "rw", 3) == 0) return SN_READABLE | SN_WRITABLE;
-    else if (strncmp(chFilter, "timer", 6) == 0) return SN_TIMER;
-    else return -1;
-}
-
-static const char *getChMask(int mask) {
-    if (mask & SN_READABLE & SN_WRITABLE) return "rw";
-    else if (mask & SN_READABLE) return "r";
-    else if (mask & SN_WRITABLE) return "w";
-    else if (mask & SN_TIMER) return "timer";
-    else return "";
 }
 
 static int hop_addEvent(lua_State *L) {
@@ -201,7 +204,7 @@ static int hop_removeEvent(lua_State *L) {
     return _removeEvent(L, fd, mask, hloop);
 }
 
-static int hop_setTimeout(lua_State *L) {
+static int _setTimer(lua_State *L, int timerType) {
     snHopLoop *hloop = checkLoop(L);
     int fd = luaL_checknumber(L, 2);
     luaL_checktype(L, 3, LUA_TTABLE);
@@ -218,29 +221,22 @@ static int hop_setTimeout(lua_State *L) {
     hloop->timers[fd].callback = clbref;
     hloop->timers[fd].mask = SN_TIMER;
     
-    hloop->api->setTimeout(hloop, fd, tv);
+    if (timerType & SN_ONCE)
+        hloop->api->setTimeout(hloop, fd, tv);
+    else
+        hloop->api->setInterval(hloop, fd, tv);
+    
+    free(tv);
     
     return 0;
 }
 
+static int hop_setTimeout(lua_State *L) {
+    return _setTimer(L, SN_ONCE);
+}
+
 static int hop_setInterval(lua_State *L) {
-    snHopLoop *hloop = checkLoop(L);
-    int fd = luaL_checknumber(L, 2);
-    luaL_checktype(L, 3, LUA_TTABLE);
-    struct timeval *tv = malloc(sizeof(struct timeval));
-    int usec_total = table_to_usec(L, 3);
-    
-    tv->tv_sec = (long int) (usec_total / SIM);
-    tv->tv_usec = (long int) fmod(usec_total, SIM);
-    
-    int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
-    hloop->timers[fd].L = L;
-    hloop->timers[fd].callback = clbref;
-    hloop->timers[fd].mask = SN_TIMER;
-    
-    hloop->api->setInterval(hloop, fd, tv);
-    
-    return 0;
+    return _setTimer(L, 0);
 }
 
 static int _clearTimer(lua_State *L, snHopLoop *hloop, int fd) {
