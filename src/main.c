@@ -210,11 +210,11 @@ static int _setTimer(lua_State *L, int timerType) {
     luaL_checktype(L, 3, LUA_TTABLE);
     if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expexted.");
     
-    struct timeval *tv = malloc(sizeof(struct timeval));
+    struct timeval tv;
     int usec_total = table_to_usec(L, 3);
     
-    tv->tv_sec = (long int) (usec_total / SIM);
-    tv->tv_usec = (long int) fmod(usec_total, SIM);
+    tv.tv_sec = (long int) (usec_total / SIM);
+    tv.tv_usec = (long int) fmod(usec_total, SIM);
     
     int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
     hloop->timers[fd].L = L;
@@ -222,11 +222,9 @@ static int _setTimer(lua_State *L, int timerType) {
     hloop->timers[fd].mask = SN_TIMER;
     
     if (timerType & SN_ONCE)
-        hloop->api->setTimeout(hloop, fd, tv);
+        hloop->api->setTimeout(hloop, fd, &tv);
     else
-        hloop->api->setInterval(hloop, fd, tv);
-    
-    free(tv);
+        hloop->api->setInterval(hloop, fd, &tv);
     
     return 0;
 }
@@ -307,6 +305,10 @@ static int hop_poll(lua_State *L) {
             if (timerEvent->mask & mask & SN_TIMER) {
                 int callback = timerEvent->callback;
                 run_callback(L, ctx, callback, fd, mask, hloop);
+                
+                if (mask & SN_ONCE) {
+                    _clearTimer(L, hloop, fd);
+                }
             }
         } else { /* <file event> */
             snFileEvent *evData = &hloop->events[fd];
@@ -358,6 +360,8 @@ static int hop_repr(lua_State *L) {
 static int hop_gc(lua_State *L) {
     //some additional cleanup, like closing hloop->state or unregistering event listeners?
     snHopLoop *hloop = checkLoop(L);
+    
+    /* free only those members; hloop itself is freed by Lua */
     free(hloop->api);
     free(hloop->state);
     
