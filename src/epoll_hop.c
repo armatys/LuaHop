@@ -30,9 +30,10 @@
  */
 
 #include <stdlib.h>
+#include <sys/types.h>
 #include <time.h>
-#include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <sys/epoll.h>
 #include "hoploop.h"
 
 typedef struct snApiState {
