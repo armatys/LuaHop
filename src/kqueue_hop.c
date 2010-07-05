@@ -123,13 +123,27 @@ static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int fl
     return fd;
 }
 
+static int getFreeTimerId(struct snHopLoop *hloop) {
+    int fd = -1;
+    int i = 0;
+    
+    for (i=0; i<SN_SETSIZE; i++) {
+        if (hloop->timers[i].mask == SN_NONE) {
+            fd = i;
+            break;
+        };
+    }
+    
+    return fd;
+}
+
 static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
-    int fd = 0;//TODO get unique fd
+    int fd = getFreeTimerId(hloop);
     return setTimer(hloop, fd, tvp, EV_ADD|EV_ONESHOT);
 }
 
 static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
-    int fd = 0;//TODO get unique fd
+    int fd = getFreeTimerId(hloop);
     return setTimer(hloop, fd, tvp, EV_ADD);
 }
 
