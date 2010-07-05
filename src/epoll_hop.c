@@ -107,17 +107,18 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
     return 0;
 }
 
-static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
-    
-    return 0;
+static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
+    int fd = 0;
+    return fd;
 }
 
-static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
-    
-    return 0;
+static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
+    int fd = 0;
+    return fd;
 }
 
 static int clearTimer(struct snHopLoop *hloop, int fd) {
+    close(fd);
     
     return 0;
 }

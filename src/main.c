@@ -206,25 +206,26 @@ static int hop_removeEvent(lua_State *L) {
 
 static int _setTimer(lua_State *L, int timerType) {
     snHopLoop *hloop = checkLoop(L);
-    int fd = luaL_checknumber(L, 2);
-    luaL_checktype(L, 3, LUA_TTABLE);
-    if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expexted.");
+    luaL_checktype(L, 2, LUA_TTABLE);
+    if (! lua_isfunction(L, 3)) return luaL_error(L, "Function was expexted.");
+    int fd = 0;
     
     struct timeval tv;
-    int usec_total = table_to_usec(L, 3);
+    int usec_total = table_to_usec(L, 2);
     
     tv.tv_sec = (long int) (usec_total / SIM);
     tv.tv_usec = (long int) fmod(usec_total, SIM);
     
     int clbref = luaL_ref(L, LUA_ENVIRONINDEX);
+    
+    if (timerType & SN_ONCE)
+        fd = hloop->api->setTimeout(hloop, &tv);
+    else
+        fd = hloop->api->setInterval(hloop, &tv);
+    
     hloop->timers[fd].L = L;
     hloop->timers[fd].callback = clbref;
     hloop->timers[fd].mask = SN_TIMER;
-    
-    if (timerType & SN_ONCE)
-        hloop->api->setTimeout(hloop, fd, &tv);
-    else
-        hloop->api->setInterval(hloop, fd, &tv);
     
     return 0;
 }

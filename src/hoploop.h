@@ -69,8 +69,8 @@ typedef struct snLoopApi {
     int (*removeEvent)(struct snHopLoop*, int fd, int mask);
     int (*poll)(struct snHopLoop*, struct timeval *tvp);
     
-    int (*setTimeout)(struct snHopLoop *hloop, int fd, struct timeval *tvp);
-    int (*setInterval)(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+    int (*setTimeout)(struct snHopLoop *hloop, struct timeval *tvp);
+    int (*setInterval)(struct snHopLoop *hloop, struct timeval *tvp);
     int (*clearTimer)(struct snHopLoop *hloop, int fd);
     
     /* fields */
@@ -90,8 +90,8 @@ static int init(struct snHopLoop *);
 static int addEvent(struct snHopLoop *hloop, int fd, int mask);
 static int removeEvent(struct snHopLoop *, int fd, int mask);
 static int poll(struct snHopLoop *, struct timeval *tvp);
-static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp);
-static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp);
+static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp);
+static int setInterval(struct snHopLoop *hloop, struct timeval *tvp);
 static int clearTimer(struct snHopLoop *hloop, int fd);
 
 #endif

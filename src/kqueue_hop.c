@@ -120,14 +120,16 @@ static int setTimer(struct snHopLoop *hloop, int fd, struct timeval *tvp, int fl
         kevent(kqfd, &ke, 1, NULL, 0, NULL);
     }
     
-    return 0;
+    return fd;
 }
 
-static int setTimeout(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
+    int fd = 0;//TODO get unique fd
     return setTimer(hloop, fd, tvp, EV_ADD|EV_ONESHOT);
 }
 
-static int setInterval(struct snHopLoop *hloop, int fd, struct timeval *tvp) {
+static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
+    int fd = 0;//TODO get unique fd
     return setTimer(hloop, fd, tvp, EV_ADD);
 }
 
