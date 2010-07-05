@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <time.h>
+#include <sys/time.h>
+#include <bits/time.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include "hoploop.h"
