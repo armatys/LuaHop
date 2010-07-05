@@ -111,6 +111,7 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
 
 static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
     int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    if (fd == -1) return -1;
     struct itimerspec new_val;
     
     new_val.it_interval.tv_sec = 0;
@@ -118,13 +119,14 @@ static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
     new_val.it_value.tv_sec = tvp->tv_sec;
     new_val.it_value.tv_sec = tvp->usec * 1000;
     
-    timerfd_settime(fd, 0, &new_val, NULL);
+    if (timerfd_settime(fd, 0, &new_val, NULL) == -1) return -1;
     
     return fd;
 }
 
 static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
     int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    if (fd == -1) return -1;
     struct itimerspec new_val;
     
     new_val.it_interval.tv_sec = tvp->tv_sec;
@@ -132,7 +134,7 @@ static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
     new_val.it_value.tv_sec = tvp->tv_sec;
     new_val.it_value.tv_sec = tvp->usec * 1000;
     
-    timerfd_settime(fd, 0, &new_val, NULL);
+    if (timerfd_settime(fd, 0, &new_val, NULL) == -1) return -1;
     
     return fd;
 }

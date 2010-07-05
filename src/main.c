@@ -223,11 +223,23 @@ static int _setTimer(lua_State *L, int timerType) {
     else
         fd = hloop->api->setInterval(hloop, &tv);
     
+    if (fd == -1) {
+        lua_pushnumber(L, -1);
+        lua_pushstring(L, "Could not create a new timer (internal error)");
+        
+        lua_pushnil(L);
+        lua_rawseti(L, LUA_ENVIRONINDEX, clbref);
+        
+        return 2;
+    }
+    
     hloop->timers[fd].L = L;
     hloop->timers[fd].callback = clbref;
     hloop->timers[fd].mask = SN_TIMER;
     
-    return 0;
+    lua_pushnumber(L, fd);
+    
+    return 1;
 }
 
 static int hop_setTimeout(lua_State *L) {
