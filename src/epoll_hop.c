@@ -30,6 +30,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
 #include <sys/timerfd.h>
@@ -111,6 +112,7 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
 }
 
 static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
+    snApiState *state = hloop->state;
     int fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (fd == -1) return -1;
     struct itimerspec new_val;
@@ -135,16 +137,26 @@ static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
 }
 
 static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
+    snApiState *state = hloop->state;
     int fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (fd == -1) return -1;
     struct itimerspec new_val;
     
     new_val.it_interval.tv_sec = tvp->tv_sec;
-    new_val.it_interval.tv_nsec = tvp->usec * 1000;
+    new_val.it_interval.tv_nsec = tvp->tv_usec * 1000;
     new_val.it_value.tv_sec = tvp->tv_sec;
     new_val.it_value.tv_nsec = tvp->tv_usec * 1000;
     
     if (timerfd_settime(fd, 0, &new_val, NULL) == -1) return -1;
+    
+    struct epoll_event ee;
+    int op = EPOLL_CTL_ADD;
+    
+    ee.events = 0;
+    ee.events |= EPOLLIN;
+    ee.data.u64 = 0; /* avoid valgrind warning */
+    ee.data.fd = fd;
+    if (epoll_ctl(state->epfd,op,fd,&ee) == -1) return -1;
     
     return fd;
 }
