@@ -236,6 +236,7 @@ static int _setTimer(lua_State *L, int timerType) {
     hloop->timers[fd].L = L;
     hloop->timers[fd].callback = clbref;
     hloop->timers[fd].mask = SN_TIMER;
+    if (timerType & SN_ONCE) hloop->timers[fd].mask |= SN_ONCE;
     
     lua_pushnumber(L, fd);
     
@@ -311,7 +312,7 @@ static int hop_poll(lua_State *L) {
         int mask = fevent.mask;
         int fd = fevent.fd;
         
-        if (mask & SN_TIMER) { /* timer event */
+        if ((mask & SN_TIMER) || (hloop->events[fd].mask == SN_NONE)) { /* timer event */
             snTimerEvent *timerEvent = &hloop->timers[fd];
             lua_State *ctx = timerEvent->L;
             
@@ -319,7 +320,7 @@ static int hop_poll(lua_State *L) {
                 int callback = timerEvent->callback;
                 run_callback(L, ctx, callback, fd, mask, hloop);
                 
-                if (mask & SN_ONCE) {
+                if (timerEvent->mask & SN_ONCE) {
                     _clearTimer(L, hloop, fd);
                 }
             }
