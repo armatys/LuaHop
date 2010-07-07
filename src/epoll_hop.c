@@ -183,8 +183,11 @@ static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
 
             if (e->events & EPOLLIN) {
                 mask |= SN_READABLE;
-                if (hloop->timers[fd].mask & SN_TIMER) mask |= SN_TIMER;
-                if (hloop->timers[fd].mask & SN_ONCE) mask |= SN_ONCE;
+                if (hloop->timers[e->data.fd].mask & SN_TIMER) {
+                    mask |= SN_TIMER;
+                    read(e->data.fd, NULL, 8);
+                }
+                if (hloop->timers[e->data.fd].mask & SN_ONCE) mask |= SN_ONCE;
             }
             if (e->events & EPOLLOUT) mask |= SN_WRITABLE;
             hloop->fired[j].fd = e->data.fd;
