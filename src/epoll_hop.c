@@ -30,7 +30,7 @@
  */
 
 #include <stdlib.h>
-#include <stdio.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <time.h>
 #include <sys/timerfd.h>
@@ -181,7 +181,11 @@ static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
             int mask = 0;
             struct epoll_event *e = state->events+j;
 
-            if (e->events & EPOLLIN) mask |= SN_READABLE;
+            if (e->events & EPOLLIN) {
+                mask |= SN_READABLE;
+                if (hloop->timers[fd].mask & SN_TIMER) mask |= SN_TIMER;
+                if (hloop->timers[fd].mask & SN_ONCE) mask |= SN_ONCE;
+            }
             if (e->events & EPOLLOUT) mask |= SN_WRITABLE;
             hloop->fired[j].fd = e->data.fd;
             hloop->fired[j].mask = mask;

@@ -312,7 +312,9 @@ static int hop_poll(lua_State *L) {
         int mask = fevent.mask;
         int fd = fevent.fd;
         
-        if ((mask & SN_TIMER) || (hloop->events[fd].mask == SN_NONE)) { /* timer event */
+        
+        //TODO make it work with both epoll and kqueue
+        if (mask & SN_TIMER) { /* timer event */
             snTimerEvent *timerEvent = &hloop->timers[fd];
             lua_State *ctx = timerEvent->L;
             
