@@ -1,5 +1,12 @@
 LuaHop - Beautiful Lua event loop.
 
+It runs on *BSD (using kqueue) and Linux (using epoll).
+
+### Requirements
+
+- Premake - used for Makefile generation ([premake](http://industriousone.com/premake))
+- On Linux: kernel 2.6.25 and glibc >= 2.8
+
 ### Compilation
 
 Use [premake](http://industriousone.com/premake) to generate appropriate build files. E.g run `premake4 gmake` to generate a Makefile. Then execute `make config=release32` or `make config=release64` to compile.
