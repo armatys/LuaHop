@@ -32,8 +32,6 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <time.h>
-#include <sys/time.h>
-#include <bits/time.h>
 #include <sys/timerfd.h>
 #include <sys/epoll.h>
 #include "hoploop.h"
@@ -113,7 +111,7 @@ static int removeEvent(struct snHopLoop *hloop, int fd, int delmask) {
 }
 
 static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
-    int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    int fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (fd == -1) return -1;
     struct itimerspec new_val;
     
@@ -124,11 +122,20 @@ static int setTimeout(struct snHopLoop *hloop, struct timeval *tvp) {
     
     if (timerfd_settime(fd, 0, &new_val, NULL) == -1) return -1;
     
+    struct epoll_event ee;
+    int op = EPOLL_CTL_ADD;
+    
+    ee.events = 0;
+    ee.events |= EPOLLIN;
+    ee.data.u64 = 0; /* avoid valgrind warning */
+    ee.data.fd = fd;
+    if (epoll_ctl(state->epfd,op,fd,&ee) == -1) return -1;
+    
     return fd;
 }
 
 static int setInterval(struct snHopLoop *hloop, struct timeval *tvp) {
-    int fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
+    int fd = timerfd_create(CLOCK_MONOTONIC, 0);
     if (fd == -1) return -1;
     struct itimerspec new_val;
     
@@ -164,6 +171,7 @@ static int poll(struct snHopLoop *hloop, struct timeval *tvp) {
 
             if (e->events & EPOLLIN) mask |= SN_READABLE;
             if (e->events & EPOLLOUT) mask |= SN_WRITABLE;
+            printf("evType: %d\n", e-events);
             hloop->fired[j].fd = e->data.fd;
             hloop->fired[j].mask = mask;
         }

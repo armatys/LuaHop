@@ -1,7 +1,7 @@
 solution "LuaHop"
     configurations { "release" }
     flags { "ExtraWarnings", "NoFramePointer", "OptimizeSpeed" }
-    buildoptions { "-pedantic", "-std=c99" }
+    buildoptions { "-pedantic" }
     platforms { "native", "x32", "x64" }
 
 project "LuaHop"
