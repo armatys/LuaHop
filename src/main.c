@@ -1,4 +1,4 @@
-/* Parts of the code below are based on ae.c file from redis project.
+/* Parts of the code below is based on ae.c file from redis project.
  *
  * Copyright (c) 2010 Mateusz Armatys
  * Copyright (c) 2006-2010, Salvatore Sanfilippo <antirez at gmail dot com>
