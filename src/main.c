@@ -279,6 +279,10 @@ static int hop_clearTimer(lua_State *L) {
     return _clearTimer(L, hloop, fd);
 }
 
+/** Runs a specified callback.
+ * IMPORTANT: this function expects, that 
+ * luaL_checkudata(L, 1, "eu.sharpnose.hoploop") will return a valid luahop object.
+ **/
 static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask, snHopLoop *hloop) {
     lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
     if (!lua_isfunction(L, -1)) return luaL_error(L, "Function was expected");
@@ -288,7 +292,7 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
         lua_xmove(L, ctx, 1);
     }
     
-    //call user function (callback)
+    //call user function: callback(loop, fd, type)
     lua_pushvalue(L, 1);
     if (ctx != L) lua_xmove(L, ctx, 1);
     lua_pushnumber(ctx, fd);
