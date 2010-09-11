@@ -56,6 +56,10 @@ static snHopLoop *createLoop(); //backend-specific; defined in files below
 static const char* time_units[] =   {"us",  "ms",   "s",  "m",    "h",       NULL};
 static const double time_scales[] = { 1.0,  1000.0, SIM,  SIM*60, SIM*60*60};
 
+/** Converts value expressed as specified time unit, to microseconds.
+ * @param {const char*} tunit time unit of value 'val' (one of time_units value)
+ * @param {double} val time value
+ **/
 static double convert_to_usec(const char *tunit, double val) {
     double usec = 0;
     const char *tu;
@@ -100,7 +104,9 @@ static double table_to_usec(lua_State *L, int tidx) {
     return usec_total;
 }
 
-static int getMask(lua_State *L, const char *chFilter) {
+/** Returns a numerical representation for string.
+ **/
+static int getMask(const char *chFilter) {
     if (strncmp(chFilter, "r", 2) == 0) return SN_READABLE;
     else if (strncmp(chFilter, "w", 2) == 0) return SN_WRITABLE;
     else if (strncmp(chFilter, "rw", 3) == 0) return SN_READABLE | SN_WRITABLE;
@@ -108,6 +114,8 @@ static int getMask(lua_State *L, const char *chFilter) {
     else return -1;
 }
 
+/** Returns string representation for a numerical value.
+ **/
 static const char *getChMask(int mask) {
     if (mask & SN_READABLE & SN_WRITABLE) return "rw";
     else if (mask & SN_READABLE) return "r";
@@ -155,9 +163,9 @@ static int hop_addEvent(lua_State *L) {
     snHopLoop *hloop = checkLoop(L);
     int fd = luaL_checknumber(L, 2);
     const char *chFilter = luaL_checkstring(L, 3);
-    if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expexted.");
+    if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expected.");
     
-    int mask = getMask(L, chFilter);
+    int mask = getMask(chFilter);
     if (mask == -1) return luaL_error(L, "Invalid event mask.");
     
     if (hloop->api->addEvent(hloop, fd, mask) == -1) {
@@ -199,7 +207,8 @@ static int hop_removeEvent(lua_State *L) {
     int fd = luaL_checknumber(L, 2);
     const char *chFilter = luaL_checkstring(L, 3);
     
-    int mask = getMask(L, chFilter);
+    int mask = getMask(chFilter);
+    if (mask == -1) return luaL_error(L, "Invalid event mask.");
     
     return _removeEvent(L, fd, mask, hloop);
 }
@@ -280,10 +289,11 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     }
     
     //call user function (callback)
+    lua_pushvalue(L, 1);
     lua_pushnumber(ctx, fd);
     lua_pushstring(ctx, getChMask(mask));
     
-    lua_pcall(ctx, 2, 1, 0);
+    lua_pcall(ctx, 3, 0, 0);
     
     return 0;
 }
@@ -362,6 +372,7 @@ static int hop_loop(lua_State *L) {
     while (hloop->shouldStop == 0) {
         hop_poll(L);
     }
+    printf("Stopping loop\n");
     
     return 0;
 }
