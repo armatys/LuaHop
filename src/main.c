@@ -290,6 +290,7 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     
     //call user function (callback)
     lua_pushvalue(L, 1);
+    if (ctx != L) lua_xmove(L, ctx, 1);
     lua_pushnumber(ctx, fd);
     lua_pushstring(ctx, getChMask(mask));
     
