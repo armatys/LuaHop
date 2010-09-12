@@ -1,6 +1,6 @@
 LuaHop - Beautiful Lua event loop.
 
-It runs on *BSD (using kqueue) and Linux (using epoll).
+It runs on *BSD (using kqueue) and Linux (using epoll). By using LuaHop, you can create event handlers for reading/writing on file descriptors. You can also set timeouts and intervals.
 
 ### Requirements
 
@@ -13,7 +13,9 @@ Use [premake](http://industriousone.com/premake) to generate appropriate build f
 
 ### Usage:
 
-To use LuaHop, you will need also a socket library. Take a look at [LuaAnet](http://github.com/mako52/LuaAnet). Probably, you could also use LuaSocket, but I haven't tested it yet.
+#### File descriptors:
+
+To use LuaHop, you may need also a socket library. Take a look at [LuaAnet](http://github.com/mako52/LuaAnet). Probably, you could also use LuaSocket, but I haven't tested it yet.
 
 	require "anet"
 	require "luahop"
@@ -59,3 +61,18 @@ To use LuaHop, you will need also a socket library. Take a look at [LuaAnet](htt
 		loop:poll()
 	end
 
+#### Timers:
+
+You can create timeouts and intervals. 
+
+    local timeout = loop:setTimeout({ms:100}, function()
+        print("Timeout, called once, after 100 ms.")
+    end)
+    
+    local interval = loop:setInterval({s:1}, function()
+        print("Interval, called every 1 second.")
+    end)
+    
+    -- to clear timeout or interval
+    clearTimer(timeout)
+    clearTimer(interval)
