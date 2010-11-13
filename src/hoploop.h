@@ -87,6 +87,7 @@ typedef struct snHopLoop {
 } snHopLoop;
 
 static int init(struct snHopLoop *);
+static int closeLoop(struct snHopLoop *);
 static int addEvent(struct snHopLoop *hloop, int fd, int mask);
 static int removeEvent(struct snHopLoop *, int fd, int mask);
 static int poll(struct snHopLoop *, struct timeval *tvp);

@@ -72,6 +72,13 @@ static int init(struct snHopLoop * hloop) {
     return 0;
 }
 
+static int closeLoop(struct snHopLoop *hloop) {
+	snApiState *state = hloop->state;
+    close(state->epfd);
+    
+    return 0;
+}
+
 static int addEvent(struct snHopLoop *hloop, int fd, int mask) {
     snApiState *state = hloop->state;
     struct epoll_event ee;

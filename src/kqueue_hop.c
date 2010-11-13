@@ -29,6 +29,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/event.h>
@@ -67,6 +68,13 @@ static int init(struct snHopLoop *hloop) {
     
     snApiState *state = hloop->state;
     state->kqfd = kqfd;
+    
+    return 0;
+}
+
+static int closeLoop(struct snHopLoop *hloop) {
+	snApiState *state = hloop->state;
+    close(state->kqfd);
     
     return 0;
 }

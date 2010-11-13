@@ -377,7 +377,6 @@ static int hop_loop(lua_State *L) {
     while (hloop->shouldStop == 0) {
         hop_poll(L);
     }
-    printf("Stopping loop\n");
     
     return 0;
 }
@@ -390,8 +389,8 @@ static int hop_repr(lua_State *L) {
 }
 
 static int hop_gc(lua_State *L) {
-    //some additional cleanup, like closing hloop->state or unregistering event listeners?
     snHopLoop *hloop = checkLoop(L);
+    closeLoop(hloop);
     
     /* free only those members; hloop itself is freed by Lua */
     free(hloop->api);
