@@ -37,7 +37,7 @@ To use LuaHop, you may need also a socket library. Take a look at [LuaAnet](http
 				break
 			elseif n == 0 then
 				-- closed connection
-				loop:removeEvent(soc, "r")
+				loop:removeListener(soc, "r")
 				anet.close(soc)
 			end
 		end
@@ -46,13 +46,13 @@ To use LuaHop, you may need also a socket library. Take a look at [LuaAnet](http
 	local function handleclient(c, ip, port)
 		print("New client: " .. tostring(ip) .. ":" .. tostring(port))
 		anet.nonblock(c)
-		loop:addEvent(c, "r", function()
+		loop:setListener(c, "r", function()
 			readclient(c)
 		end)
 	end
 	
 	-- adding "read" (accepting connection) callback
-	loop:addEvent(fd, "r", function()
+	loop:setListener(fd, "r", function()
 		local cfd, ip, port = anet.accept(fd, true, true)
 		handleclient(cfd, ip, port)
 	end)

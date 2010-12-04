@@ -297,7 +297,7 @@ static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int ma
     if (ctx != L) lua_xmove(L, ctx, 1);
     lua_pushnumber(ctx, fd);
     lua_pushstring(ctx, getChMask(mask));
-    
+
     lua_pcall(ctx, 3, 0, 0);
     
     return 0;
@@ -400,8 +400,8 @@ static int hop_gc(lua_State *L) {
 }
 
 static const struct luaL_Reg hoplib_m [] = {
-    {"addEvent", hop_addEvent},
-    {"removeEvent", hop_removeEvent},
+    {"setListener", hop_addEvent},
+    {"removeListener", hop_removeEvent},
     {"setTimeout", hop_setTimeout},
     {"setInterval", hop_setInterval},
     {"clearTimer", hop_clearTimer},
