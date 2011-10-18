@@ -402,12 +402,12 @@ static int hop_gc(lua_State *L) {
 }
 
 static const struct luaL_Reg hoplib_m [] = {
-    {"setListener", hop_addEvent},
-    {"removeListener", hop_removeEvent},
-    {"setTimeout", hop_setTimeout},
-    {"setInterval", hop_setInterval},
-    {"clearTimeout", hop_clearTimer},
-    {"clearInterval", hop_clearTimer},
+    {"setlistener", hop_addEvent},
+    {"rmlistener", hop_removeEvent},
+    {"settimeout", hop_setTimeout},
+    {"setinterval", hop_setInterval},
+    {"rmtimeout", hop_clearTimer},
+    {"rminterval", hop_clearTimer},
     {"poll", hop_poll},
     {"stop", hop_stop},
     {"loop", hop_loop},
