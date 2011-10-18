@@ -1,6 +1,6 @@
 /* Parts of the code below is based on ae.c file from redis project.
  *
- * Copyright (c) 2010 Mateusz Armatys
+ * Copyright (c) 2010-2011 Mateusz Armatys
  * Copyright (c) 2006-2010, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
  *
@@ -37,7 +37,7 @@
 #include "config.h"
 #include "hoploop.h"
 
-static snHopLoop *createLoop(); //backend-specific; defined in files below
+static snHopLoop *createLoop(); //backend-specific; defined in *_hop.c
 
 #ifdef HAVE_EPOLL
     #include "epoll_hop.c"
@@ -47,7 +47,7 @@ static snHopLoop *createLoop(); //backend-specific; defined in files below
     #endif
 #endif
 
-#define checkLoop(L) (snHopLoop *)luaL_checkudata(L, 1, "eu.sharpnose.hoploop")
+#define checkLoop(L) (snHopLoop *)luaL_checkudata(L, 1, "pl.makenika.hoploop")
 
 #define SIM 1000000.0 /* 1 second as a number of microseconds */
 /* IMPORTANT: time_units and time_scales have to be in sync */
@@ -135,7 +135,7 @@ static int hop_create(lua_State *L) {
     }
     
     memcpy(hloop, src, sizeof(snHopLoop));
-    luaL_getmetatable(L, "eu.sharpnose.hoploop");
+    luaL_getmetatable(L, "pl.makenika.hoploop");
     lua_setmetatable(L, -2);
     
     int i = 0;
@@ -164,6 +164,10 @@ static int hop_addEvent(lua_State *L) {
     int fd = luaL_checknumber(L, 2);
     const char *chFilter = luaL_checkstring(L, 3);
     if (! lua_isfunction(L, 4)) return luaL_error(L, "Function was expected.");
+
+    if (fd > SN_SETSIZE) {
+        return luaL_error(L, "File descriptor outside SN_SETSIZE");
+    }
     
     int mask = getMask(chFilter);
     if (mask == -1) return luaL_error(L, "Invalid event mask.");
@@ -281,7 +285,7 @@ static int hop_clearTimer(lua_State *L) {
 
 /** Runs a specified callback.
  * IMPORTANT: this function expects, that 
- * luaL_checkudata(L, 1, "eu.sharpnose.hoploop") will return a valid luahop object.
+ * luaL_checkudata(L, 1, "pl.makenika.hoploop") will return a valid luahop object.
  **/
 static int run_callback(lua_State *L, lua_State *ctx, int clbref, int fd, int mask, snHopLoop *hloop) {
     lua_rawgeti(L, LUA_ENVIRONINDEX, clbref);
@@ -327,8 +331,6 @@ static int hop_poll(lua_State *L) {
         int mask = fevent.mask;
         int fd = fevent.fd;
         
-        
-        //TODO make it work with both epoll and kqueue
         if (mask & SN_TIMER) { /* timer event */
             snTimerEvent *timerEvent = &hloop->timers[fd];
             lua_State *ctx = timerEvent->L;
@@ -423,7 +425,7 @@ LUALIB_API int luaopen_luahop(lua_State *L) {
     lua_newtable(L);
     lua_replace(L, LUA_ENVIRONINDEX);
     
-    luaL_newmetatable(L, "eu.sharpnose.hoploop");
+    luaL_newmetatable(L, "pl.makenika.hoploop");
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
     luaL_register(L, NULL, hoplib_m);
